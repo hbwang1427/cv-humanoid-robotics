@@ -1,0 +1,21 @@
+# Model weights
+*.pt
+
+# Videos
+labs/videos/*.mp4
+labs/videos/*.avi
+labs/videos/*.mov
+
+# Downloaded robot models (large, clone separately)
+robot/models/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Output files
+labs/videos/*_annotated.mp4
+labs/videos/screenshot_*.jpg
+labs/output_annotated.jpg
