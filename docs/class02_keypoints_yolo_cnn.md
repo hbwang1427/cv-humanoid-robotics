@@ -16,12 +16,12 @@ By the end of this class you will be able to:
 
 ---
 
-## 0. Homework Review (5 min)
+## 0. Homework Review (15 min)
 
 Quick check from Class 1:
-- Could you list the active ROS 2 topics with `ros2 topic list`?
-- What was printed when you echoed `/joint_states`?
-- Which keypoints had low confidence in your YOLO output — and why?
+- To get familiar with ROS 2: Could you list the active ROS 2 topics with `ros2 topic list`?
+- Under the output architecture of Yolo
+- Add bounding box on top of yolo keypoint extraction
 
 ---
 
@@ -66,6 +66,8 @@ Key properties:
 ---
 
 ## 2. YOLO Architecture (15 min)
+
+https://web.cs.ucdavis.edu/~yjlee/teaching/ecs289g-winter2018/YOLO.pdf
 
 YOLO (You Only Look Once) runs a **single forward pass** — no separate proposal stage.
 Version 8 / 11 uses a clean 3-part structure:
@@ -576,27 +578,14 @@ it is negative, with values closer to 0 meaning smoother movement.
    - Inference time per frame
    - Number of keypoints with confidence > 0.5
 
-3. **ROS 2 exploration**: With `src/main.py` running, open a second terminal and run:
-   ```bash
-   source /opt/ros/humble/setup.bash
-   ros2 topic echo /joint_states --once
-   ros2 topic hz /joint_states
-   ```
-   What is the actual publish rate? Is it stable?
+3. **Sport-specific keypoints**: Choose either tennis or golf. List the 6 most important keypoints for your chosen sport and explain what joint angle each pair reveals about technique. Write 5–10 sentences.
 
-4. **Sport-specific keypoints**: Choose either tennis or golf. List the 6 most important keypoints for your chosen sport and explain what joint angle each pair reveals about technique. Write 5–10 sentences.
-
-5. **Smoothness analysis**: Run `lab_a4_smoothness.py` on the workout video.
+4. **Smoothness analysis**: Run `lab_a4_smoothness.py` on the workout video.
    - What is the SPARC score for the right wrist?
    - At what timestamps (seconds) does jerk spike highest? What movement is happening there?
    - Re-run with `--keypoints 11 12` for hip rotation. Is hip movement smoother or jerkier than the wrist? Why?
 
-6. *(Stretch)* Export the YOLOv8n-pose model to ONNX and load it with OpenCV's DNN module:
-   ```python
-   from ultralytics import YOLO
-   YOLO("yolov8n-pose.pt").export(format="onnx")
-   # Then load with: cv2.dnn.readNetFromONNX("yolov8n-pose.onnx")
-   ```
+5. Write a simplified yolo model and train it on hundreds of images on your local laptop
 
 ---
 
