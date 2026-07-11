@@ -1,6 +1,6 @@
 # Class 1 — System Architecture, Workspace Setup, and Toolchains
 **Sports Biomechanics Analysis with AI Vision & Robotics**
-*Duration: 1 hour | Phase 1 of 6*
+*Duration: 1 hour | Phase 1 of 7*
 
 ---
 
@@ -335,7 +335,8 @@ Expected: webcam window opens, green skeleton overlaid on your body, joint angle
 |-------|-------|
 | **1** | **System Architecture, Setup & Toolchains** ← you are here |
 | 2 | Camera Module & Real-Time YOLO Inference |
-| 3 | Kinematic Math — Angles from Keypoints |
-| 4 | ROS 2 Publisher & Joint State Messages |
-| 5 | RViz2 Visualization & URDF Tuning |
-| 6 | Sports Analysis — Tennis Serve / Golf Swing Scoring |
+| 3 | Facial Expression Recognition & Robot Face Mapping |
+| 4 | Kinematic Math — Angles from Keypoints |
+| 5 | ROS 2 Publisher & Joint State Messages |
+| 6 | RViz2 Visualization & URDF Tuning |
+| 7 | Sports Analysis — Tennis Serve / Golf Swing Scoring |
