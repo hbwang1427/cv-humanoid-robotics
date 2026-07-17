@@ -20,6 +20,23 @@ Video/Camera -> YOLO Pose (17 keypoints) -> Joint Angle Math -> ROS 2 /joint_sta
 | Main entry | `src/main.py` | Full pipeline with ROS 2 |
 | No-ROS test | `src/test_no_ros.py` | Pipeline without ROS 2 (OpenCV only) |
 
+### Facial expression -> robot face (Class 3)
+
+```
+Camera -> YOLO face locate -> dlib 68 landmarks -> EAR/MAR/smile/brow -> ROS 2 /face/joint_states -> robot_state_publisher -> /tf -> RViz2
+```
+
+| Module | File | Role |
+|--------|------|------|
+| Face landmark detector | `src/face_detector.py` | dlib 68-landmark predictor, seeded by YOLO's 5 face keypoints |
+| Feature extractor | `src/face_features.py` | EAR/MAR/smile/brow features + neutral-face baseline calibration |
+| Face mapper | `src/face_mapper.py` | Features -> face robot joint angles |
+| Face publisher | `src/face_publisher.py` | Publishes `/face/joint_states` + `/face/robot_description` + `/face/expression`, with EMA smoothing |
+| Face visualizer | `src/face_visualizer.py` | OpenCV overlay (feature bars + expression label) |
+| Face main entry | `src/face_main.py` | Full expression pipeline with ROS 2 |
+| No-ROS face test | `src/test_face_no_ros.py` | Expression pipeline without ROS 2 (OpenCV only, works on macOS) |
+| Face robot | `robot/face.urdf` | Primitive-shape head with jaw/eyebrow/eyelid/lip-corner joints |
+
 ---
 
 ## Prerequisites
@@ -44,6 +61,16 @@ source /opt/ros/humble/setup.bash
 mamba create -n ros_env python=3.10 -y
 mamba activate ros_env
 pip install ultralytics opencv-python yt-dlp
+```
+
+### Facial expression pipeline — extra dependencies
+```bash
+mamba install -c conda-forge dlib -y
+
+curl -LO http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+bunzip2 shape_predictor_68_face_landmarks.dat.bz2
+mkdir -p labs/models
+mv shape_predictor_68_face_landmarks.dat labs/models/
 ```
 
 ---
@@ -97,6 +124,39 @@ rviz2 -d config/robot_view.rviz
 ```
 
 > RViz2 first-time setup: set **Fixed Frame** = `base_link`, add **RobotModel** display on topic `/robot_description`.
+
+---
+
+### Option 2b — Facial expression -> robot face (ROS 2 + RViz2, Linux)
+
+**Terminal 1 — robot_state_publisher + RViz2 (one command):**
+```bash
+mamba activate ros_env
+./labs/lab_c3_face_ros.sh
+```
+
+**Terminal 2 — run the expression publisher:**
+```bash
+mamba activate ros_env
+source /opt/ros/humble/setup.bash
+
+python src/face_main.py            # webcam
+python src/face_main.py --video path/to/clip.mp4
+```
+
+Hold a neutral face for the first ~1 second (30-frame calibration), then smile, raise your eyebrows, open your mouth, or blink — the jaw/brow/eyelid/lip-corner joints on the RViz2 face should track you in real time via `/face/joint_states` -> `robot_state_publisher` -> `/tf`.
+
+---
+
+### Option 2c — Facial expression, no ROS (macOS-friendly)
+
+```bash
+mamba activate ros_env
+python src/test_face_no_ros.py            # webcam
+python src/test_face_no_ros.py --video path/to/clip.mp4
+```
+
+Shows dlib landmarks, live EAR/MAR/smile/brow feature values, and the classified expression label — useful for tuning thresholds before wiring up ROS 2.
 
 ---
 
@@ -164,17 +224,23 @@ cv-humanoid-robotics/
 ├── README.md
 ├── robot/
 │   ├── humanoid.urdf              # Simple built-in humanoid
+│   ├── face.urdf                  # Face robot (jaw/brow/eyelid/lip-corner joints)
 │   └── models/
 │       └── unitree_ros/           # Unitree robot URDFs + meshes
 ├── config/
-│   └── robot_view.rviz            # Pre-configured RViz2 layout
+│   ├── robot_view.rviz            # Pre-configured RViz2 layout (body)
+│   └── face_view.rviz             # Pre-configured RViz2 layout (face)
 ├── labs/
 │   ├── lab_a_hello_yolo.py        # Lab A: YOLO on video/camera
 │   ├── lab_b_rviz_urdf.sh         # Lab B: URDF in RViz2
+│   ├── lab_c3_face_ros.sh         # Lab C3: face robot_state_publisher + RViz2
+│   ├── models/                    # dlib shape_predictor_68_face_landmarks.dat goes here
 │   └── videos/
 │       └── workout.mp4            # Sample workout video
 ├── docs/
-│   └── class01_introduction.md    # Class 1 teaching material
+│   ├── class01_introduction.md    # Class 1 teaching material
+│   ├── class02_keypoints_yolo_cnn.md
+│   └── class03_facial_expression.md
 └── src/
     ├── main.py                    # Full pipeline (ROS 2)
     ├── test_no_ros.py             # Pipeline without ROS 2
@@ -182,7 +248,14 @@ cv-humanoid-robotics/
     ├── mapper.py                  # Keypoints -> joint angles
     ├── ros_publisher.py           # ROS 2 joint state publisher
     ├── robot_registry.py          # Robot model registry
-    └── visualizer.py              # OpenCV debug overlay
+    ├── visualizer.py              # OpenCV debug overlay
+    ├── face_main.py               # Full expression pipeline (ROS 2)
+    ├── test_face_no_ros.py        # Expression pipeline without ROS 2
+    ├── face_detector.py           # dlib 68-landmark detection (YOLO-seeded)
+    ├── face_features.py           # EAR/MAR/smile/brow + baseline calibration
+    ├── face_mapper.py             # Features -> face robot joint angles
+    ├── face_publisher.py          # ROS 2 face joint state publisher
+    └── face_visualizer.py         # OpenCV debug overlay (face)
 ```
 
 ---
@@ -197,3 +270,7 @@ cv-humanoid-robotics/
 | RViz shows no robot | Check topic: `ros2 topic echo /robot_description` |
 | Unitree mesh not found in RViz | `export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd)/robot/models/unitree_ros/robots` |
 | Low FPS | Use `--every 2` flag or switch to `yolov8n-pose` (nano model) |
+| `No module named 'dlib'` | `mamba install -c conda-forge dlib -y` (pip install requires `cmake` and compiles from source — conda is faster, especially on Apple Silicon where DeepFace-style TensorFlow installs tend to fail) |
+| `FileNotFoundError: shape_predictor...dat` | Download it — see "Facial expression pipeline — extra dependencies" above |
+| Face robot doesn't move in RViz2 | Check `ros2 topic echo /face/joint_states`; confirm `lab_c3_face_ros.sh` and `face_main.py` are both running |
+| Face features jump around | Extend calibration with `--calib-frames 60`, or hold still during the "Calibrating..." phase |

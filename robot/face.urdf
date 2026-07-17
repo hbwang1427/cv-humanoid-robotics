@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<robot name="face">
+
+  <!-- =========================================================
+       MATERIALS
+  ========================================================= -->
+  <material name="skin">  <color rgba="0.87 0.72 0.61 1"/> </material>
+  <material name="white"> <color rgba="0.95 0.95 0.95 1"/> </material>
+  <material name="black"> <color rgba="0.05 0.05 0.05 1"/> </material>
+  <material name="pink">  <color rgba="0.75 0.35 0.35 1"/> </material>
+  <material name="brow">  <color rgba="0.25 0.16 0.10 1"/> </material>
+
+  <!-- =========================================================
+       LINKS
+
+       Primitive-shape stand-in for a scanned/sculpted head — swap the
+       <geometry> on "head" for a <mesh> to get true visual realism;
+       the joint names/limits here are what drive expressions and stay
+       the same either way (see docs/class03_facial_expression.md §4).
+  ========================================================= -->
+
+  <!-- Head — root link -->
+  <link name="head">
+    <visual>
+      <geometry><sphere radius="0.11"/></geometry>
+      <material name="skin"/>
+    </visual>
+    <collision><geometry><sphere radius="0.11"/></geometry></collision>
+    <inertial><mass value="1.0"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
+  </link>
+
+  <!-- Eyes — fixed, cosmetic only (no gaze tracking in this pipeline) -->
+  <link name="left_eye">
+    <visual><geometry><sphere radius="0.022"/></geometry><material name="white"/></visual>
+    <visual><origin xyz="0.014 0 0"/><geometry><sphere radius="0.009"/></geometry><material name="black"/></visual>
+    <inertial><mass value="0.01"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial>
+  </link>
+  <link name="right_eye">
+    <visual><geometry><sphere radius="0.022"/></geometry><material name="white"/></visual>
+    <visual><origin xyz="0.014 0 0"/><geometry><sphere radius="0.009"/></geometry><material name="black"/></visual>
+    <inertial><mass value="0.01"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial>
+  </link>
+
+  <!-- Jaw — opens/closes with mouth aspect ratio (MAR) -->
+  <link name="jaw">
+    <visual>
+      <origin xyz="0 0.01 -0.02"/>
+      <geometry><box size="0.075 0.07 0.045"/></geometry>
+      <material name="skin"/>
+    </visual>
+    <collision><origin xyz="0 0.01 -0.02"/><geometry><box size="0.075 0.07 0.045"/></geometry></collision>
+    <inertial><mass value="0.05"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial>
+  </link>
+
+  <!-- Eyebrows — raise/furrow with brow_raise feature -->
+  <link name="left_eyebrow">
+    <visual><geometry><box size="0.05 0.012 0.014"/></geometry><material name="brow"/></visual>
+    <inertial><mass value="0.005"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+  <link name="right_eyebrow">
+    <visual><geometry><box size="0.05 0.012 0.014"/></geometry><material name="brow"/></visual>
+    <inertial><mass value="0.005"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+
+  <!-- Eyelids — close with eye aspect ratio (EAR) / blink -->
+  <link name="left_eyelid">
+    <visual><origin xyz="0 0 -0.014"/><geometry><box size="0.05 0.014 0.028"/></geometry><material name="skin"/></visual>
+    <inertial><mass value="0.005"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+  <link name="right_eyelid">
+    <visual><origin xyz="0 0 -0.014"/><geometry><box size="0.05 0.014 0.028"/></geometry><material name="skin"/></visual>
+    <inertial><mass value="0.005"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+
+  <!-- Lip corners — pulled outward with smile_ratio -->
+  <link name="left_lip_corner">
+    <visual><geometry><sphere radius="0.009"/></geometry><material name="pink"/></visual>
+    <inertial><mass value="0.002"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+  <link name="right_lip_corner">
+    <visual><geometry><sphere radius="0.009"/></geometry><material name="pink"/></visual>
+    <inertial><mass value="0.002"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+
+  <!-- =========================================================
+       JOINTS
+       Names/limits match src/face_mapper.py JOINT_LIMITS and the
+       mapping table in docs/class03_facial_expression.md §4.
+       Convention: +x = robot's left, +y = forward (out of the face), +z = up.
+  ========================================================= -->
+
+  <joint name="left_eye_joint" type="fixed">
+    <parent link="head"/><child link="left_eye"/>
+    <origin xyz="0.045 0.098 0.02"/>
+  </joint>
+  <joint name="right_eye_joint" type="fixed">
+    <parent link="head"/><child link="right_eye"/>
+    <origin xyz="-0.045 0.098 0.02"/>
+  </joint>
+
+  <joint name="jaw_joint" type="revolute">
+    <parent link="head"/><child link="jaw"/>
+    <origin xyz="0 0.03 -0.055"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.0" upper="0.5" effort="1" velocity="4"/>
+  </joint>
+
+  <joint name="left_brow_joint" type="revolute">
+    <parent link="head"/><child link="left_eyebrow"/>
+    <origin xyz="0.045 0.098 0.055"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.3" upper="0.3" effort="1" velocity="4"/>
+  </joint>
+  <joint name="right_brow_joint" type="revolute">
+    <parent link="head"/><child link="right_eyebrow"/>
+    <origin xyz="-0.045 0.098 0.055"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.3" upper="0.3" effort="1" velocity="4"/>
+  </joint>
+
+  <joint name="left_eyelid_joint" type="revolute">
+    <parent link="head"/><child link="left_eyelid"/>
+    <origin xyz="0.045 0.098 0.04"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.0" upper="1.2" effort="1" velocity="6"/>
+  </joint>
+  <joint name="right_eyelid_joint" type="revolute">
+    <parent link="head"/><child link="right_eyelid"/>
+    <origin xyz="-0.045 0.098 0.04"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.0" upper="1.2" effort="1" velocity="6"/>
+  </joint>
+
+  <!-- Lip corners hang off the jaw so the mouth widens naturally as it opens -->
+  <joint name="left_lip_corner_joint" type="prismatic">
+    <parent link="jaw"/><child link="left_lip_corner"/>
+    <origin xyz="0.032 0.045 0.005"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.0" upper="0.012" effort="1" velocity="2"/>
+  </joint>
+  <joint name="right_lip_corner_joint" type="prismatic">
+    <parent link="jaw"/><child link="right_lip_corner"/>
+    <origin xyz="-0.032 0.045 0.005"/>
+    <axis xyz="-1 0 0"/>
+    <limit lower="0.0" upper="0.012" effort="1" velocity="2"/>
+  </joint>
+
+</robot>

@@ -1,5 +1,6 @@
 # Model weights
 *.pt
+labs/models/*.dat
 
 # Videos
 labs/videos/*.mp4
@@ -19,3 +20,6 @@ __pycache__/
 labs/videos/*_annotated.mp4
 labs/videos/screenshot_*.jpg
 labs/output_annotated.jpg
+
+# macOS
+.DS_Store
