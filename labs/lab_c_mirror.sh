@@ -32,18 +32,20 @@ command -v ros2  &>/dev/null || { echo "ERROR: ros2 not found (activate ros_env 
 command -v rviz2 &>/dev/null || { echo "ERROR: rviz2 not found."; exit 1; }
 
 # --- Resolve URDF path + root link for the requested robot -------------------
-read -r URDF FIXED_FRAME < <(python - "$ROBOT" <<'PY'
+# (plain $(...) command substitution — macOS bash 3.2 mis-parses a heredoc
+#  nested inside process substitution `< <(... <<EOF ...)`)
+INFO="$(python -c '
 import sys, xml.etree.ElementTree as ET
 sys.path.insert(0, "src")
 from robot_registry import get_urdf_path
 path = get_urdf_path(sys.argv[1])
 root = ET.parse(path).getroot()
-links = [l.get("name") for l in root.findall("link")]
 children = {j.find("child").get("link") for j in root.findall("joint")}
-base = next(l for l in links if l not in children)   # root = link that is nobody's child
+base = next(l.get("name") for l in root.findall("link") if l.get("name") not in children)
 print(path, base)
-PY
-)
+' "$ROBOT")" || { echo "ERROR: could not resolve URDF for robot '$ROBOT'."; exit 1; }
+URDF="${INFO%% *}"
+FIXED_FRAME="${INFO##* }"
 
 echo "============================================"
 echo "  Lab C — motion mirroring: $ROBOT"
