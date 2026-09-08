@@ -330,6 +330,50 @@ msg.name, msg.position = names, positions
 
 Why every joint, every frame: **`robot_state_publisher` only emits `/tf` for a joint after it has seen that joint's name in a `JointState` message.** Send only the 6 driven joints and the other 13 links (hips, torso, the entire lower body) get *no transform* — RViz reports "No transform from [pelvis]" and renders nothing. This is the single most common reason "the robot doesn't show up".
 
+### The map at a glance
+
+```
+   HUMAN  (COCO-17 keypoints, image pixels)            UNITREE H1  (URDF joint, radians)
+   ────────────────────────────────────────            ────────────────────────────────
+
+         5 ●━━━━━━━━━● 6    shoulders
+           ┃         ┃        ∠ at 5 / 6  (hip–shoulder–elbow) ──▶ *_shoulder_pitch_joint
+         7 ●         ● 8     elbows                                 axis 0 1 0   limit −2.87 … 2.87
+           ┃         ┃        ∠ at 7 / 8  (shoulder–elbow–wrist)──▶ *_elbow_joint
+         9 ●         ● 10    wrists                                 axis 0 1 0   limit −1.25 … 2.61
+        11 ●━━━━━━━━━● 12    hips
+           ┃         ┃
+        13 ●         ● 14    knees
+           ┃         ┃        ∠ at 13 / 14 (hip–knee–ankle)     ──▶ *_knee_joint
+        15 ●         ● 16    ankles                                 axis 0 1 0   limit −0.26 … 2.05
+
+   measured angle  ──(unsigned, clamped to the *simple* limits in mapper.py)──▶
+        canonical  ──( target = scale · angle + offset )──▶
+           target  ──( clamp to the H1 URDF limit, in RobotPublisher )──▶  /joint_states
+```
+
+**Driven joints (6)** — `JOINT_MAPS["h1"]` in `src/robot_registry.py`:
+
+| Human triplet (COCO idx, L / R) — vertex = angle | Measured (`mapper`, rad) | → H1 joint (×2) | `scale, offset` | H1 axis | H1 limit (rad) | Effective (rad) |
+|---|---|---|---|---|---|---|
+| `11·5·7` / `12·6·8` — **shoulder** | `0` arm down → `1.57` arm out | `*_shoulder_pitch_joint` | `−1.0, 0.0` | `0 1 0` | `−2.87 … 2.87` | `−1.57 … 0` |
+| `5·7·9` / `6·8·10` — **elbow** | `2.35` straight → `0` folded | `*_elbow_joint` | `−1.0, 2.35` | `0 1 0` | `−1.25 … 2.61` | `0 … 2.35` |
+| `11·13·15` / `12·14·16` — **knee** | `2.35` straight → `0` bent | `*_knee_joint` | `−1.0, 2.35` | `0 1 0` | `−0.26 … 2.05` | `0 … 2.05` *(clipped)* |
+
+**Undriven joints (13)** — always published as `0.0`, clamped to these limits if ever set:
+
+| Held at `0.0` | H1 limit (rad) | Motion the frontal camera can't see |
+|---|---|---|
+| `*_hip_yaw_joint` | `−0.43 … 0.43` | leg turns out/in (transverse) |
+| `*_hip_roll_joint` | `−0.43 … 0.43` | leg out to the side (frontal) |
+| `*_hip_pitch_joint` | `−3.14 … 2.53` | leg forward/back (sagittal, occluded head-on) |
+| `*_ankle_joint` | `−0.87 … 0.52` | foot point/flex |
+| `torso_joint` | `−2.35 … 2.35` | waist twist |
+| `*_shoulder_roll_joint` | L `−0.34 … 3.11` / R `−3.11 … 0.34` | arm abduction |
+| `*_shoulder_yaw_joint` | L `−1.3 … 4.45` / R `−4.45 … 1.3` | upper-arm twist |
+
+> `mapper.py` also produces `*_hip_pitch` (derived from the knee angle, not a real measurement) — it is **not** in `JOINT_MAPS["h1"]`, so it never reaches H1.
+
 ### What this map does *not* do
 
 - **Proportions** — H1's arm/leg length ratios ≠ the athlete's; joint *angles* transfer, limb *reach* does not.
