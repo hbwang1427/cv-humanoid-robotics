@@ -21,9 +21,9 @@ import rclpy
 sys.path.insert(0, os.path.dirname(__file__))
 
 from detector import PoseDetector
-from mapper import keypoints_to_joints
+from mapper import keypoints_to_joints, remap_joints
 from ros_publisher import RobotPublisher
-from robot_registry import get_urdf_path, list_robots, DEFAULT_ROBOT
+from robot_registry import get_urdf_path, get_joint_map, list_robots, DEFAULT_ROBOT
 from visualizer import Visualizer
 
 DEFAULT_VIDEO = "labs/videos/workout.mp4"
@@ -61,7 +61,10 @@ def main():
 
     video_path = None if args.camera else args.video
     urdf_path  = get_urdf_path(args.robot)
+    joint_map  = get_joint_map(args.robot)
     print(f"Robot: {args.robot}  ({urdf_path})")
+    if joint_map:
+        print(f"Joint remap: {len(joint_map)} driven joints -> {args.robot} URDF names")
 
     rclpy.init()
     publisher = RobotPublisher(urdf_path)
@@ -82,7 +85,7 @@ def main():
             joints = None
             if keypoints is not None:
                 joints = keypoints_to_joints(keypoints)
-                publisher.publish_joints(joints)
+                publisher.publish_joints(remap_joints(joints, joint_map))
                 frame = detector.draw(frame, keypoints)
 
             if not viz.show(frame, joints, keypoints):

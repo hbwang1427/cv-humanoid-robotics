@@ -86,3 +86,22 @@ def keypoints_to_joints(kps: np.ndarray) -> dict[str, float]:
         joints["right_hip_pitch"] = _clamp(np.pi - joints["right_knee"] * 0.5, "right_hip_pitch")
 
     return joints
+
+
+def remap_joints(joints: dict[str, float],
+                 joint_map: dict[str, tuple[str, float, float]]) -> dict[str, float]:
+    """Rename/rescale canonical joint angles for a specific robot's URDF.
+
+    joint_map: canonical_name -> (urdf_joint_name, scale, offset).
+    Returns {urdf_joint_name: scale * angle + offset}. An empty map passes the
+    canonical dict through unchanged.
+    """
+    if not joint_map:
+        return joints
+    out: dict[str, float] = {}
+    for canonical, angle in joints.items():
+        if canonical not in joint_map:
+            continue
+        target, scale, offset = joint_map[canonical]
+        out[target] = scale * angle + offset
+    return out
