@@ -354,61 +354,40 @@ Why every joint, every frame: **`robot_state_publisher` only emits `/tf` for a j
 
 ---
 
-## 7. Lab Exercises (10 min)
+## 7. Next Steps — Real-to-Sim & Learned Motor Skills (5 min)
 
-### Lab D1 — Inspect the motion signal (no ROS)
+Retargeting gives us a **kinematic puppet**: H1 copies your joint angles frame by frame, but it does not know it has mass, and on hardware it would fall on the first step (§5, §6). The rest of this project is about closing that gap — turning *"copy this pose"* into *"the robot knows how to do this motion"*.
 
-File: `labs/lab_d1_motion_signal.py` — run YOLO + `keypoints_to_joints()` on the workout video, print the 10 canonical angles per frame, and plot `left_elbow` and `right_shoulder_pitch` over time.
-
-```bash
-python labs/lab_d1_motion_signal.py --video labs/videos/workout.mp4 --plot
+```
+many videos ──▶ retarget each ──▶ motion dataset ──▶ train a policy in sim ──▶ sim-to-real ──▶ skill on H1
+ (§1–§5)          (§5)            H1 joint trajectories   (imitation + RL, physics)  (close the gap)  (autonomous)
 ```
 
-Expected: elbow traces that swing between ~0 and ~2.35 as the athlete curls; gaps where `confidence < 0.3`. Which joint is noisiest, and does that match the camera view?
+### 1. Collect a motion dataset
 
-### Lab D2 — Read the H1 URDF
+One retargeted clip is a **reference trajectory**: the 19 joint angles `q(t)` over time, plus a desired root (pelvis) motion. Record many clips — different exercises, gaits, sports actions, everyday gestures — and you have a dataset of reference motions for H1. Retargeting quality now matters much more than it did for a live RViz demo: the data needs jitter filtering, hard joint-limit enforcement, foot-contact labels, and an estimate of root translation (which our fixed-pelvis pipeline currently throws away).
 
-File: `labs/lab_d2_urdf_inspect.py` — parse any robot's URDF and print the kinematic tree, every revolute joint's `axis` + limits, the root link, and a ✓/✗ for whether the current `JOINT_MAPS` drives it.
+### 2. Learn a control policy in simulation
 
-```bash
-python labs/lab_d2_urdf_inspect.py --robot h1
-python labs/lab_d2_urdf_inspect.py --robot simple
-```
+Load H1's URDF into a physics simulator (**Isaac Lab**, **MuJoCo**, **Genesis**) with gravity, contacts, and actuator models. Train a **policy** — a neural network mapping robot state → joint targets — to *reproduce* a reference motion while staying balanced:
 
-### Lab D3 — Tune the retarget in RViz
+- **Motion imitation** — *DeepMimic* (2018): reinforcement learning with a reward for matching the reference pose **and** not falling. One policy per motion, or a single goal-conditioned policy over the whole dataset.
+- **Adversarial Motion Priors** (*AMP*, 2021): a discriminator rewards "looks like the dataset" rather than exact frame-matching, so the policy can blend skills and fill in transitions the data never showed.
+- Either way, the policy *discovers* the ankle torques, hip corrections, and timing that keep a physical robot upright — exactly the dynamics that pure retargeting ignores.
 
-```bash
-# Terminal 1
-./labs/lab_c_mirror.sh h1
-# Terminal 2
-python src/main.py --robot h1
-```
+### 3. Cross the reality gap (sim-to-real)
 
-Find a joint that bends the wrong way. Flip its `scale` sign in `src/robot_registry.py` → `JOINT_MAPS["h1"]`, re-run Terminal 2, confirm. Record which joints you flipped.
+A policy trained in a perfect simulator breaks on a real robot: unmodeled friction, motor lag, sensor noise, slightly wrong masses. The standard defenses:
 
-### Lab D4 — Add a driven joint
+- **Domain randomization** — randomize masses, friction, latency, and terrain during training so the policy learns to be robust rather than exploiting one exact physics.
+- **System identification** — measure the real actuators and match the sim to them.
+- **Deployable observations** — train only on quantities the real H1 can actually sense (joint encoders, IMU), never on privileged sim state.
 
-Extend `JOINT_MAPS["h1"]` with **one** new joint using a *signed* angle:
-- `torso_joint` from the shoulder-line tilt: `atan2(R_shoulder.y − L_shoulder.y, R_shoulder.x − L_shoulder.x)`, or
-- `left_hip_pitch_joint` from the signed angle of the thigh vector (hip→knee) vs the pelvis-down vector (Section 3 `signed_angle`).
+### 4. A library of skills
 
-Add the computation to `mapper.py`, forward it through `remap_joints`, clamp to the URDF limit, and verify direction in RViz.
+End state: H1 holds a set of **learned skills** — "squat", "wave", "jab", "walk" — each a trained policy, selectable at runtime. The human demonstration has become *training data*, not a live puppet string, and the robot executes the motion under its own balance control. Recent humanoid work in exactly this direction: **H2O / OmniH2O** (whole-body teleop distilled into learned control), **ExBody** (expressive skills from human video), **PHC** (a physics-based controller that can track almost any reference motion).
 
----
-
-## 8. Take-Home Tasks
-
-1. **Data-type audit.** For one frame, write down the concrete Python type and shape at each of the 7 pipeline stages in Section 1 (e.g. "`np.ndarray (17,3) float32`"). Where could a `None` appear, and what happens downstream?
-
-2. **Observability table.** Watch the workout video. For each of the 6 driven H1 joints, rate 0–3 how well the frontal camera observes that motion, and justify each score from the limb's movement plane.
-
-3. **Range calibration.** Run Lab D1 and record the actual min/max of `left_elbow` and `left_shoulder_pitch` over the whole video. Re-derive the `scale`/`offset` for those two H1 joints from *your measured* range (not the theoretical `0..2.35`) and compare to the values in `JOINT_MAPS`.
-
-4. **Sign recovery.** Implement `signed_angle()` from Section 3 for the elbow (forearm vector vs upper-arm vector). Does the sign flip when the athlete's arm crosses the body? Plot it against the unsigned `_angle_at_b` value.
-
-5. **URDF reading.** In `h1.urdf`, follow the chain `pelvis → left_elbow_link`. List every joint, its `origin xyz`, and its `axis`. What is the total translational offset from `pelvis` to `left_elbow_link` at the zero pose?
-
-6. *(Stretch)* Write a `JOINT_MAPS` entry for **`g1`** (Unitree G1, 23-DOF). Run `python labs/lab_d2_urdf_inspect.py --robot g1` to get the joint names, map the same 6 joints, launch `./labs/lab_c_mirror.sh g1`, and mirror the video onto G1.
+> This is where the remaining classes head: logging reference trajectories out of our pipeline, replaying them under physics, then training and evaluating a tracking policy on H1.
 
 ---
 
@@ -432,7 +411,12 @@ Add the computation to `mapper.py`, forward it through `remap_joints`, clamp to 
 | H2O — human-to-humanoid teleop | https://human2humanoid.com/ |
 | OmniH2O | https://omni.human2humanoid.com/ |
 | ExBody — expressive whole-body control | https://expressive-humanoid.github.io/ |
+| PHC — Perpetual Humanoid Control | https://zhengyiluo.github.io/PHC/ |
+| DeepMimic — example-guided motion imitation (RL) | https://xbpeng.github.io/projects/DeepMimic/ |
+| AMP — Adversarial Motion Priors | https://xbpeng.github.io/projects/AMP/ |
 | Isaac Lab (retargeting + RL in sim) | https://isaac-sim.github.io/IsaacLab/ |
+| MuJoCo physics simulator | https://mujoco.org/ |
+| Domain randomization (sim-to-real) | https://arxiv.org/abs/1703.06907 |
 
 ---
 
