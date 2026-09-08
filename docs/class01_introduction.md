@@ -336,7 +336,7 @@ Expected: webcam window opens, green skeleton overlaid on your body, joint angle
 | **1** | **System Architecture, Setup & Toolchains** ← you are here |
 | 2 | Camera Module & Real-Time YOLO Inference |
 | 3 | Facial Expression Recognition & Robot Face Mapping |
-| 4 | Kinematic Math — Angles from Keypoints |
+| 4 | Robot Architecture & Motion Retargeting |
 | 5 | ROS 2 Publisher & Joint State Messages |
 | 6 | RViz2 Visualization & URDF Tuning |
 | 7 | Sports Analysis — Tennis Serve / Golf Swing Scoring |

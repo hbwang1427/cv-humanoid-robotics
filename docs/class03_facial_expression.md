@@ -499,7 +499,7 @@ Verify against your smartwatch or a 15-second manual pulse count × 4.
 | 1 | System Architecture, Setup & Toolchains |
 | 2 | Keypoint Tracking, YOLO & CNN Deep Dive |
 | **3** | **Facial Expression Recognition & Robot Face Mapping** ← you are here |
-| 4 | Kinematic Math — Angles from Keypoints |
+| 4 | Robot Architecture & Motion Retargeting |
 | 5 | ROS 2 Publisher & Joint State Messages |
 | 6 | RViz2 Visualization & URDF Tuning |
 | 7 | Sports Analysis — Tennis Serve / Golf Swing Scoring |

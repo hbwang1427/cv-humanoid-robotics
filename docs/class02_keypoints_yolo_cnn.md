@@ -612,7 +612,7 @@ it is negative, with values closer to 0 meaning smoother movement.
 | 1 | System Architecture, Setup & Toolchains |
 | **2** | **Keypoint Tracking, YOLO & CNN Deep Dive** ← you are here |
 | 3 | Facial Expression Recognition & Robot Face Mapping |
-| 4 | Kinematic Math — Angles from Keypoints |
+| 4 | Robot Architecture & Motion Retargeting |
 | 5 | ROS 2 Publisher & Joint State Messages |
 | 6 | RViz2 Visualization & URDF Tuning |
 | 7 | Sports Analysis — Tennis Serve / Golf Swing Scoring |

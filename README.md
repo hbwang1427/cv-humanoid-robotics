@@ -240,7 +240,8 @@ cv-humanoid-robotics/
 ├── docs/
 │   ├── class01_introduction.md    # Class 1 teaching material
 │   ├── class02_keypoints_yolo_cnn.md
-│   └── class03_facial_expression.md
+│   ├── class03_facial_expression.md
+│   └── class04_robot_architecture_motion_mapping.md
 └── src/
     ├── main.py                    # Full pipeline (ROS 2)
     ├── test_no_ros.py             # Pipeline without ROS 2
